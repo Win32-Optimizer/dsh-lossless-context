@@ -1,0 +1,64 @@
+# ============================================================================
+#  dsh-lossless-context — 配置模板（memory-heavy 档：记忆敏感场景）
+# ============================================================================
+#  适用：角色扮演 / 长期陪伴 / 长篇小说 / 心理咨询 / 任何「忘了就崩」的场景。
+#
+#  和 balanced 档的区别只有两行：
+#    thresholdRatio  0.75 → 0.60   更早压缩，给中文留缓冲，不容易撞 1M 窗口
+#    retainRatio     0.15 → 0.35   逐字保留从约 12 万涨到约 28 万 token
+#
+#  代价：压缩后每轮固定携带从约 12 万涨到约 28 万 token。
+#        命中缓存时约 +¥0.006/轮（高峰），未命中时约 +¥0.32/轮。
+#        低频压缩会把这份代价摊薄，但它不是免费的。
+#
+#  如果觉得太贵：先把 retainRatio 降到 0.25，别先动 thresholdRatio ——
+#  水位调低只会压缩得更勤，反而更贵且更容易撞窗口。
+# ============================================================================
+
+- id: openseek-lcm
+  config:
+    capture:
+      enabled: true
+      includeToolResults: true
+      maxTextCharsPerMessage: 60000
+    automaticRetrieval:
+      enabled: false
+    freshTailMessages: 10
+    summary:
+      minMessagesForTransform: 16
+      levelSize: 6
+      summaryCharBudget: 1500
+    systemHint: true
+    tools:
+      enabled: true
+      expose:
+        - lcm_status
+        - lcm_resume
+        - lcm_grep
+        - lcm_expand
+        - lcm_artifact
+    allowScopeAll: false
+    retention:
+      deletedSessionDays: 365
+      orphanBlobDays: 30
+
+- id: compaction-basic
+  config:
+    # W = 1,048,576；输出预留 256,000
+    # → 触发点 = min(W × 0.60, 768,000) = 629,145 token ≈ 窗口 60%
+    thresholdRatio: 0.6
+    headroomTokens: 24576
+    # → 逐字尾部 = floor(792,576 × 0.35) = 277,401 token（约 9 万字中文）
+    retainRatio: 0.35
+    summarizationProvider: deepseek-official
+    summarizationModel: deepseek-flash
+    maxTokens: 16384
+    compactionRetries: 1
+    maxOverflowRetries: 1
+    auto: true
+
+- id: tool-result-pruner
+  config:
+    thresholdChars: 32000
+    headChars: 24000
+    tailChars: 8000

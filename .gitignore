@@ -1,0 +1,30 @@
+# 依赖与产物（不要提交）
+node_modules/
+*.log
+
+# 备份产物（含个人会话内容，绝不能进仓库）
+backup/
+*-backup/
+*.bak-*
+.bak-*
+
+# 个人数据 —— 这几个是硬红线
+sessions/
+*.jsonl
+*.jsonl.zstd
+lcm.db
+lcm.db-wal
+lcm.db-shm
+AGENTS.md          # 真实记忆文件是个人的，只提交 templates/ 里的模板
+*.credentials.yaml
+.credentials.yaml
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 发布指南是给我自己看的
+docs/发布指南.md
