@@ -1,0 +1,99 @@
+# ============================================================================
+#  dsh-lossless-context — 配置模板（balanced 档）
+# ============================================================================
+#  用途：把下面这段合并进你的 DSH profile 覆盖层
+#        <DSH_HOME>/profiles/<profile>/cordis.patch.yml
+#        （<DSH_HOME> 默认是 ~/.dsh，Windows 是 C:\Users\<你>\.dsh）
+#
+#  安装：直接跑 scripts/install.ps1（Windows）或 scripts/install.sh（macOS/Linux），
+#        它会检查重复 id 并安全追加。也可以手动把本文件内容贴进那个 patch。
+#
+#  这一档面向「长期写代码 / 长工作流」：更省 token，逐字尾部给到约 12 万 token。
+#  如果是角色扮演、长篇小说、心理咨询这类「记忆敏感」场景，用
+#  patches/cordis.memory-heavy.yml 那一档。
+#
+#  前提：先装好 openseek-lcm
+#        dsh plugin --profile <profile> add openseek-lcm
+# ============================================================================
+
+# ── 1. 归档层：把历史逐字存进本地 SQLite，压缩不吃掉它 ──────────────────────
+- id: openseek-lcm
+  config:
+    # 归档目录。默认 <DSH_HOME>/storages/dsh-plugin-lcm，跨平台安全，一般不用改。
+    # 想放别的盘再取消注释：
+    # storeDir: 'D:\lcm-archive'
+
+    capture:
+      enabled: true
+      includeToolResults: true      # 连命令输出一起归档，才能找回报错原文
+      maxTextCharsPerMessage: 60000 # 超过这个字符的大块会外移成 artifact
+
+    # 相似度自动召回：默认关。压缩后的首轮会确定性注入「压缩指针 + resume note」，
+    # 需要回溯时用 lcm_grep / lcm_expand 即可。
+    # 想让相关的旧记录自动浮上来，改 true（每轮多花约 900 字符）。
+    automaticRetrieval:
+      enabled: false
+
+    # 最近多少条消息不参与召回（模型本来就看得到，不用再检索一遍）
+    freshTailMessages: 10
+
+    summary:
+      minMessagesForTransform: 16
+      levelSize: 6
+      summaryCharBudget: 1500
+
+    systemHint: true
+
+    tools:
+      enabled: true
+      # 只暴露回溯用的 5 个工具。18 个全开会让每次请求都多付一份 schema token。
+      # 需要更多（doctor / retention / blob_gc / snapshot…）就删掉 expose 整段。
+      expose:
+        - lcm_status
+        - lcm_resume
+        - lcm_grep
+        - lcm_expand
+        - lcm_artifact
+
+    # 默认 false：禁止模型跨项目搜「所有归档」。想开改成 true。
+    allowScopeAll: false
+
+    retention:
+      deletedSessionDays: 365   # 会话删了之后，归档再留一年
+      orphanBlobDays: 30
+
+# ── 2. 压缩层：到水位才压，压的时候走便宜模型 ────────────────────────────────
+- id: compaction-basic
+  config:
+    # 触发水位 = floor(min(W × thresholdRatio, (W − 输出预留) − headroomTokens))
+    # W = 1,048,576（deepseek-flash 的上下文窗口）
+    # 输出预留默认 256,000（ds h-llm-deepseek 的 maxTokens 默认值）
+    # → 本档实际触发点 = min(786,432, 768,000) = 768,000 token ≈ 窗口 73%
+    thresholdRatio: 0.75
+    headroomTokens: 24576
+
+    # 逐字保留的近期对话 = floor((W − 输出预留) × retainRatio)
+    # → 本档 ≈ 118,886 token（约 4 万字中文）
+    retainRatio: 0.15
+
+    # 压缩摘要走便宜模型，主对话模型不受影响。
+    # 用 deepseek-flash：¥2/M 输入(未命中) vs Pro 的 ¥9/M（高峰价）
+    summarizationProvider: deepseek-official
+    summarizationModel: deepseek-flash
+
+    # 摘要输出上限
+    maxTokens: 16384
+
+    compactionRetries: 1
+    maxOverflowRetries: 1
+    auto: true
+
+# ── 3. 工具输出修剪层：放宽默认值，别把中段细节砍掉 ──────────────────────────
+- id: tool-result-pruner
+  config:
+    # DSH 默认是 8192 / 4096 / 1024 字符 —— 会把长输出的中段整段删掉，
+    # 而端口号、文件路径、报错字符串经常正好在中段。
+    # 完整原文仍在追加式会话日志里（可用 sourceEventSeqs 回放），这里放宽头尾预算。
+    thresholdChars: 32000
+    headChars: 24000
+    tailChars: 8000
