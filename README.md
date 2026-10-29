@@ -201,7 +201,30 @@ tools:
 
 拷贝前后各采样一次会话日志修改时间，**中途有写入就丢弃本次快照重来**——不会留下半个会话。
 
+计划任务**完全静默**：任务调 `wscript.exe` 跑一个自动生成的 `.vbs`，VBS 用 `Run(cmd, 0, False)` 以隐藏窗口启动 PowerShell。不会闪控制台。
+
 想连「AI 回合期间」也避让，可以装 pwsh hook（见 `scripts/dsh-pwsh-hook.ps1` 头部说明）。**这一步的安装语法随 DSH 版本可能不同，装之前先测**。
+
+### 工作区记忆文件被编辑器塞了 base64？
+
+Typora / Obsidian / 部分网页编辑器粘图时会写成 `![](data:image/png;base64,....)`。那串东西如果进了 `AGENTS.md`，每个新会话都会把它当提示词读一遍——白烧几千 token。
+
+```powershell
+./scripts/clean-agents.ps1 -Path "D:\你的工作区\AGENTS.md"           # 先看报告
+./scripts/clean-agents.ps1 -Path "D:\你的工作区\AGENTS.md" -Apply    # 真清（自动备份）
+```
+
+它会把 `![alt](data:image/...;base64,...)` 换成 `![alt](图片已移除)`，保留 alt 文字和文档结构，并告诉你省了多少 token。
+
+### 排查与深挖
+
+```bash
+node tools/lcm-inspect.mjs                        # 体检：完整性/计数/每会话统计/摘要树
+node tools/lcm-inspect.mjs --show "某个关键词"     # 绕过 FTS 直接搜原文（判断是"没归档"还是"索引坏了"）
+node tools/lcm-inspect.mjs --sql "select ..."     # 只读 SQL
+```
+
+完整的运维手册（诊断树、升级清单、参数公式、自己写插件的实现思路）见 [docs/维护手册.md](docs/维护手册.md)。
 
 ---
 
@@ -231,14 +254,18 @@ dsh-lossless-context/
 │   ├── dsh-backup.ps1            # 备份（会话+归档+配置）
 │   ├── dsh-backup-idle.ps1       # 空闲感知调度器
 │   ├── dsh-pwsh-hook.ps1         # AI 回合忙锁（可选）
-│   └── install-tasks.ps1         # 注册计划任务
+│   ├── clean-agents.ps1          # 清除记忆文件里的 base64 图片垃圾
+│   └── install-tasks.ps1         # 注册静默计划任务（wscript + VBS 包装）
 ├── tests/
 │   ├── acceptance.mjs            # 验收：压缩后逐字召回
 │   └── cost-model.mjs            # 成本对比
+├── tools/
+│   └── lcm-inspect.mjs           # 归档体检 / 只读查询（DSH 运行中可用）
 ├── templates/
 │   └── AGENTS.md.example         # 工作区记忆模板（含强制检索规则）
 ├── docs/
-│   └── 深入原理.md
+│   ├── 深入原理.md                # 摘要为什么有损、归档为什么无损、缓存为什么省钱
+│   └── 维护手册.md                # 运维检查、诊断树、参数调优、自己写插件的实现思路
 └── README.md
 ```
 

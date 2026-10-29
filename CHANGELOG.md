@@ -15,11 +15,17 @@
 - `scripts/dsh-backup.ps1` — 会话日志 + 归档一致快照 + 配置覆盖层的三层备份
 - `scripts/dsh-backup-idle.ps1` — 空闲感知调度器（键鼠空闲 + DSH 忙锁 + 会话安静 + 间隔到期）
 - `scripts/dsh-pwsh-hook.ps1` — AI 回合忙锁（可选加固）
-- `scripts/install-tasks.ps1` — 注册/卸载 Windows 计划任务
+- `scripts/install-tasks.ps1` — 注册/卸载 Windows 计划任务。**静默**：任务调 `wscript.exe` 跑自动生成的
+  `.vbs`，VBS 用 `Run(cmd, 0, False)` 以窗口样式 0 启动 PowerShell，不闪控制台
+- `scripts/clean-agents.ps1` — 清除记忆文件里被 Markdown 编辑器塞入的 base64 图片，
+  保留 alt 文字与文档结构，并报告省下的 token
 - `tests/acceptance.mjs` — 验收：模拟三次压缩后逐字召回 11 条细节
 - `tests/cost-model.mjs` — 三场景成本对比
+- `tools/lcm-inspect.mjs` — 归档体检 / 只读 SQL / 绕过 FTS 的原文搜索
 - `templates/AGENTS.md.example` — 工作区记忆模板（含强制检索规则与在场记录结构）
 - `docs/深入原理.md` — 摘要为什么有损、归档为什么无损、缓存为什么是省钱大头
+- `docs/维护手册.md` — 运维检查清单、症状→原因→修法诊断树、升级路径、参数公式、
+  直接查库的 SQL、**从零写同类插件的实现思路**、11 条实测踩坑
 
 ### 已知问题
 
