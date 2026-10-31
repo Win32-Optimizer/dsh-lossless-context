@@ -26,7 +26,7 @@
 [CmdletBinding()]
 param(
     [switch]$Remove,
-    [string]$DailyTime = '03:30',
+    [string]$DailyTime = '00:00',
     [string]$DshHome = $env:DSH_HOME
 )
 
@@ -89,8 +89,8 @@ Write-Host ""
 $vbs1 = New-SilentWrapper -Name 'DSH-Daily-Backup' -IdleArgs '-Kind Daily -IntervalHours 24'
 $tr1  = "`"$wscript`" //B //Nologo `"$vbs1`""
 $c1 = Invoke-SchTasks @('/Create', '/TN', 'DSH-Daily-Backup', '/TR', $tr1,
-                        '/SC', 'DAILY', '/ST', $DailyTime, '/F')
-if ($c1 -eq 0) { Write-Host "  [ok] DSH-Daily-Backup（每天 $DailyTime，间隔 24h，静默）" -ForegroundColor Green }
+                        '/SC', 'DAILY', '/ST', $DailyTime, '/RI', '120', '/DU', '24:00', '/F')
+if ($c1 -eq 0) { Write-Host "  [ok] DSH-Daily-Backup（每天 $DailyTime 起每 2 小时重试，间隔 24h，静默）" -ForegroundColor Green }
 else { Write-Host "  [fail] DSH-Daily-Backup 注册失败" -ForegroundColor Red }
 
 $vbs2 = New-SilentWrapper -Name 'DSH-LCM-Snapshot' -IdleArgs '-Kind Snapshot -IntervalHours 6'

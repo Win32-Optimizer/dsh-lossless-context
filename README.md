@@ -255,12 +255,16 @@ dsh-lossless-context/
 │   ├── dsh-backup-idle.ps1       # 空闲感知调度器
 │   ├── dsh-pwsh-hook.ps1         # AI 回合忙锁（可选）
 │   ├── clean-agents.ps1          # 清除记忆文件里的 base64 图片垃圾
+│   ├── auto-snapshot.ps1         # 自动存档调度器（静默）
+│   ├── install-snapshot-task.ps1 # 注册「自动存档」计划任务
 │   └── install-tasks.ps1         # 注册静默计划任务（wscript + VBS 包装）
 ├── tests/
 │   ├── acceptance.mjs            # 验收：压缩后逐字召回
 │   └── cost-model.mjs            # 成本对比
 ├── tools/
-│   └── lcm-inspect.mjs           # 归档体检 / 只读查询（DSH 运行中可用）
+│   ├── lcm-inspect.mjs           # 归档体检 / 只读查询（DSH 运行中可用）
+│   ├── resume-pack.mjs           # 会话被内容策略拒收后，从归档生成「接着聊」的恢复包
+│   └── auto-snapshot.mjs         # 定期自动存档 + 助手腔抽风检测
 ├── templates/
 │   └── AGENTS.md.example         # 工作区记忆模板（含强制检索规则）
 ├── docs/
